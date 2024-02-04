@@ -75,7 +75,7 @@
         num-clients (Integer/parseInt num-clients-str)
         num-transfers (Integer/parseInt num-transfers-str)
         seed seed-str
-        generator (atom (lcg-init seed))
+        generator (lcg-init seed)
         server (create-server num-accounts generator)]
 
     ;; Konten vor der Simulation ausgeben
