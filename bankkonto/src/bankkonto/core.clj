@@ -7,28 +7,26 @@
               (bit-and (unchecked-add (unchecked-multiply checksum 31) (int char)) 0xFFFFFFFF))
             0
             str-input)))
-
 (defn lcg-init [seed]
-  {:state (lcg-hash-seed seed)
-   :a 1664525
-   :c 1013904223
-   :m 1294967296})
+  (atom (assoc {} :state (lcg-hash-seed seed)
+               :a 1664525
+               :c 1013904223
+               :m 1294967296)))
+
 
 (defn lcg-next [generator]
-  (let [new-state (mod (+ (* (:a generator) (:state generator)) (:c generator)) (:m generator))]
-    (assoc generator :state new-state)))
+  (let [new-state (mod (+ (* (:a @generator) (:state @generator)) (:c @generator)) (:m @generator))]
+    (swap! generator assoc :state new-state)))
 
 (defn lcg-random [generator]
-  (/ (float (:state generator)) (:m generator)))
+  (/ (float (:state (lcg-next generator))) (:m @generator)))
 
-(defn lcg-sequence [generator n]
-  (map lcg-random (take n (iterate lcg-next generator))))
+(defn get-next-number [generator n]
+  (int (Math/floor (* (lcg-random generator) n))))
 
-(defn get-next-random [generator]
-  (let [next-random (lcg-random @generator)]
-    (reset! generator (lcg-next @generator)) ; Aktualisiert den Generator-Zustand
-    next-random))
-
+(defn get-next-number-between [generator n m]
+  (let [random-value (lcg-random generator)]
+    (int (Math/floor (+ (* random-value (- m n)) n)))))
 
 
 ; Ab hier beginnen die Methoden für den Banktransfer
@@ -44,7 +42,7 @@
 
 ; Erstellt eine angegebene Anzahl an Accounts und setzt den initalen Kontostand auf einen Wert zwischen 0 und 1000
 (defn create-server [num-accounts generator]
-  (let [accounts (atom (vec (repeatedly num-accounts #(int (Math/floor (* (get-next-random generator) 1000))))))]
+  (let [accounts (atom (vec (repeatedly num-accounts #( get-next-number generator 1000 ))))]
     {:accounts accounts
      :generator generator
      :transfer (partial transfer accounts)}))
@@ -54,9 +52,9 @@
   (let [transfer-fn (:transfer server)
         num-accounts (count @(:accounts server))]
     (doseq [_ (range num-transfers)]
-      (let [k1 (int (Math/floor (* (get-next-random (:generator server)) num-accounts)))
-            k2 (int (Math/floor (* (get-next-random (:generator server)) num-accounts)))
-            amount (int (Math/floor (* (get-next-random (:generator server)) 500)))]
+      (let [k1 (get-next-number (:generator server) num-accounts)  
+            k2 (get-next-number (:generator server) num-accounts)
+            amount (get-next-number (:generator server) 500)]
         (transfer-fn k1 k2 amount)))))
 
 ; Definiert eine Funktion zur Ausführung der Simulation mit einer bestimmten Anzahl von Clients und Überweisungen.
@@ -97,4 +95,4 @@
     (shutdown-agents)))
   
 
-;; Beispielaufruf: (main 10 5 100 12345)
+;; Beispielaufruf: (main 10 5 100 ABC123)
