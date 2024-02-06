@@ -76,6 +76,11 @@
       (println (str account-start))
       (println (str account-end)))))
 
+(defn collect-account-differences [accounts-start accounts-end]
+  (reduce (fn [acc [start end]] (conj acc start end))
+          []
+          (map vector accounts-start accounts-end)))
+
 (defn main [num-accounts-str num-clients-str num-transfers-str seed-str]
   (let [num-accounts (Integer/parseInt num-accounts-str)
         num-clients (Integer/parseInt num-clients-str)
@@ -83,20 +88,21 @@
         seed seed-str
         generator (lcg-init seed)
         server (create-server num-accounts generator)
-        accounts-start (vec @(:accounts server))
+        accounts-start @(:accounts server)
         total-start (total-balance (:accounts server))]
 
     ;; Simulation starten
     (run-simulation server num-clients num-transfers)
 
     ;; Zustände der Konten nach der Simulation speichern
-    (let [accounts-end (vec @(:accounts server))
-          total-end (total-balance (:accounts server))]
-
-      ;; Ausgabe anpassen
-      (println total-start)
-      (println total-end)
-      (print-account-difference accounts-start accounts-end)
+    (let [accounts-end @(:accounts server)
+          total-end (total-balance (:accounts server))
+          differences (collect-account-differences accounts-start accounts-end)
+          output (conj differences total-end total-start)
+          output-str (clojure.string/join ", " output)]
+          
+      ;; Ausgabe der gesammelten Informationen als Zeichenkette 
+      (println (str "[" (clojure.string/join ", " output) "]"))
 
       ;; Beenden der Agenten
       (shutdown-agents))))
