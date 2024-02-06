@@ -70,29 +70,37 @@
   (reduce + @accounts))
 
 
+(defn print-account-difference [accounts-start accounts-end]
+  (doseq [[idx account-start] (map-indexed vector accounts-start)]
+    (let [account-end (nth accounts-end idx)]
+      (println (str account-start))
+      (println (str account-end)))))
+
 (defn main [num-accounts-str num-clients-str num-transfers-str seed-str]
   (let [num-accounts (Integer/parseInt num-accounts-str)
         num-clients (Integer/parseInt num-clients-str)
         num-transfers (Integer/parseInt num-transfers-str)
         seed seed-str
         generator (lcg-init seed)
-        server (create-server num-accounts generator)]
-
-    ;; Konten vor der Simulation ausgeben
-    (println "Konten vor Transaktionen:")
-    (print-accounts @(:accounts server))
-    (println "Gesamtwert aller Konten vor Transaktionen:" (total-balance (:accounts server)))
+        server (create-server num-accounts generator)
+        accounts-start (vec @(:accounts server))
+        total-start (total-balance (:accounts server))]
 
     ;; Simulation starten
     (run-simulation server num-clients num-transfers)
 
-    ;; Konten nach der Simulation ausgeben
-    (println "Konten nach Transaktionen:")
-    (print-accounts @(:accounts server))
-    (println "Gesamtwert aller Konten nach Transaktionen:" (total-balance (:accounts server)))
+    ;; Zustände der Konten nach der Simulation speichern
+    (let [accounts-end (vec @(:accounts server))
+          total-end (total-balance (:accounts server))]
 
-    ;; Beenden der Agenten
-    (shutdown-agents)))
+      ;; Ausgabe anpassen
+      (println total-start)
+      (println total-end)
+      (print-account-difference accounts-start accounts-end)
+
+      ;; Beenden der Agenten
+      (shutdown-agents))))
+
   
 
 ;; Beispielaufruf: (main 10 5 100 ABC123)
